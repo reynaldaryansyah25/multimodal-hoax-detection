@@ -1,0 +1,30 @@
+# Ignore virtual environments
+.venv/
+.venv-labelstudio/
+.env
+
+# VS Code settings
+.vscode/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Ignore all images, video, audio in data/raw (YouTube, TBH, News)
+data/raw/turnbackhoax/images/
+data/raw/news/images/
+data/raw/youtube/audio/
+data/raw/youtube/videos/
+data/raw/youtube/thumbnails/
+
+# Make sure metadata JSON/CSV ARE included
+!data/raw/turnbackhoax/*.json
+!data/raw/news/*.json
+!data/raw/youtube/*.json
+!data/raw/turnbackhoax/*.csv
+!data/raw/news/*.csv
+!data/raw/youtube/*.csv
+
+# Ignore other binary files accidentally in raw
+data/raw/**/*.jpg
+data/raw/**/*.png
