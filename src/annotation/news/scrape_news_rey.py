@@ -209,7 +209,7 @@ def scrape_all_sources(
             if art["text"] and len(art["text"]) > 120:
                 if download_images and art.get("image", "").startswith("http"):
                     ext = (art["image"].split("?")[0].split(".")[-1] or "jpg")[:4]
-                    ip = os.path.join(IMG_DIR, f"NEWS_{i:04d}.{ext}")
+                    ip = os.path.join(IMG_DIR, f"HPH_{i:04d}.{ext}")
                     if download_image(art["image"], ip):
                         art["image_path"] = ip
                 out.append(art)

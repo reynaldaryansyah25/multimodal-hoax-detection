@@ -1,7 +1,7 @@
 from src.data_preprocessing.youtube_discovery import yt_search_queries
 from src.data_preprocessing.youtube_enrich_download import enrich_and_download
 from annotation.scrape_portal_hoax import scrape_and_save
-from annotation.scrape_news import scrape_all_sources
+from annotation.news.scrape_news_rey import scrape_all_sources
 from src.data_preprocessing.integrate_dataset import integrate
 from src.utils.io import save_json
 import pandas as pd, json
