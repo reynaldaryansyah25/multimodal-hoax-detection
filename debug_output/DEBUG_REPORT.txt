@@ -1,0 +1,23 @@
+======================================================================
+TURNBACKHOAX SCRAPER - DEBUG REPORT
+Generated: 2025-11-03 20:12:12
+======================================================================
+
+FILES GENERATED:
+  - article_turnbackhoax.id.html (90,507 bytes)
+  - category_kategori_hoax_page1.html (48,549 bytes)
+  - category_kategori_hoax_page2.html (48,549 bytes)
+  - homepage.html (90,507 bytes)
+  - search_hoax_prabowo.html (91,473 bytes)
+  - sitemap_sitemap.xml (1,636 bytes)
+  - sitemap_wp-sitemap-posts-post-1.xml (397,737 bytes)
+  - sitemap_wp-sitemap.xml (1,636 bytes)
+
+======================================================================
+NEXT STEPS:
+======================================================================
+1. Open HTML files in browser to inspect structure
+2. Look for article link patterns
+3. Identify correct CSS selectors
+4. Check if JavaScript rendering is needed
+5. Update scraper with correct selectors

@@ -1,20 +1,16 @@
-import os, time, re, json
-from datetime import datetime, timezone
-from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
-import feedparser
+import os, time, json
+from datetime import datetime, timezone, timedelta
+from urllib.parse import urlsplit
+from newspaper import Article
+import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-from src.utils.net import get
-from src.utils.io import save_json
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 OUTPUT_DIR = "./data/raw/news/"
 IMG_DIR = os.path.join(OUTPUT_DIR, "images")
-RSS_FEEDS = {
-    "kompas": "https://rss.kompas.com/nasional",
-    "detik": "https://news.detik.com/berita/rss",
-    "cnn":   "https://www.cnnindonesia.com/nasional/rss",
-    "antaranews": "https://www.antaranews.com/rss/politik",
-}
+
 
 POLITICAL_KEYWORDS = [
     "UU", "undang-undang", "KUHP", "KUHAP", "ITE", "revisi", "peraturan", "hukum", "peradilan",
@@ -22,135 +18,293 @@ POLITICAL_KEYWORDS = [
     "politik", "partai", "pemilu", "parpol", "koalisi", "kebijakan politik", "KPU", "Bawaslu",
     "caleg", "capres", "pilkada", "pemerintah", "menteri", "kabinet", "DPR", "MPR",
     "HAM", "Komnas HAM", "hak asasi", "pelanggaran HAM", "penghilangan paksa",
-    "netralitas ASN", "pembela HAM", "reformasi hukum",
+    "netralitas ASN", "pembela HAM", "reformasi hukum", "Prabowo", "kabinet merah putih"
 ]
 
-WIB_OFFSET = 7 * 3600
 
-def parse_iso_like(dt_str):
-    if not dt_str:
-        return None
-    s = dt_str.strip().replace(" ", "T")
-    try_fmts = [
-        "%Y-%m-%dT%H:%M:%S%z",
-        "%Y-%m-%dT%H:%M:%S.%f%z",
-        "%Y-%m-%dT%H:%M%z",
-        "%Y-%m-%d",
-        "%Y-%m-%dT%H:%M:%S",
-        "%Y-%m-%dT%H:%M",
-    ]
-    for fmt in try_fmts:
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+}
+
+
+def discover_kompas_urls_with_date(start_date, end_date, limit_per_day=20):
+    all_urls = []
+    current = start_date
+    
+    print(f"  Kompas: Scraping from {start_date.date()} to {end_date.date()}...")
+    
+    while current <= end_date:
+        date_str = current.strftime("%Y-%m-%d")
+        
         try:
-            dt = datetime.strptime(s, fmt)
-            if dt.tzinfo is None:
-                ts = dt.replace(tzinfo=timezone.utc).timestamp()
-                dt = datetime.fromtimestamp(ts + WIB_OFFSET, tz=timezone.utc)
-            else:
-                dt = dt.astimezone(timezone.utc)
-            return dt
-        except Exception:
-            continue
-    return None
+            url = f"https://indeks.kompas.com/?site=all&date={date_str}"
+            r = requests.get(url, headers=HEADERS, timeout=15)
+            soup = BeautifulSoup(r.text, 'html.parser')
+            
+            for link in soup.select('.article__link, .latest__link')[:limit_per_day]:
+                href = link.get('href')
+                if href and href.startswith('http') and 'kompas.com' in href:
+                    all_urls.append(href)
+            
+            time.sleep(0.3)
+        except Exception as e:
+            pass
+        
+        current += timedelta(days=1)
+    
+    print(f"  Kompas: {len(all_urls)} URLs found")
+    return [('kompas', u) for u in all_urls]
 
-def to_iso(dt):
-    return dt.astimezone(timezone.utc).isoformat()
 
-def norm_url(u):
-    parts = urlsplit(u)
-    q = [(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True) if not k.lower().startswith("utm_")]
-    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(q), parts.fragment))
+def discover_detik_urls_with_date(start_date, end_date, limit_per_day=20):
+    all_urls = []
+    current = start_date
+    
+    print(f"  Detik: Scraping from {start_date.date()} to {end_date.date()}...")
+    
+    while current <= end_date:
+        date_str = current.strftime("%m/%d/%Y")
+        
+        try:
+            url = f"https://news.detik.com/indeks?date={date_str}"
+            r = requests.get(url, headers=HEADERS, timeout=15)
+            soup = BeautifulSoup(r.text, 'html.parser')
+            
+            for link in soup.select('article h3 a, article h2 a')[:limit_per_day]:
+                href = link.get('href')
+                if href and href.startswith('http') and 'detik.com' in href:
+                    all_urls.append(href)
+            
+            time.sleep(0.3)
+        except Exception as e:
+            pass
+        
+        current += timedelta(days=1)
+    
+    print(f"  Detik: {len(all_urls)} URLs found")
+    return [('detik', u) for u in all_urls]
 
-def expand_rss_filtered(rss_url, keywords, limit=120, date_start=None, date_end=None):
+
+def discover_cnn_urls_paginated(limit=200):
+    all_urls = []
+    
+    print(f"  CNN: Scraping with pagination...")
+    
+    for page in range(1, 11):
+        try:
+            url = f"https://www.cnnindonesia.com/nasional/indeks/{page}"
+            r = requests.get(url, headers=HEADERS, timeout=15)
+            soup = BeautifulSoup(r.text, 'html.parser')
+            
+            for link in soup.select('.media__link, article a'):
+                href = link.get('href')
+                if href:
+                    if not href.startswith('http'):
+                        href = 'https://www.cnnindonesia.com' + href
+                    if 'cnnindonesia.com' in href and href not in all_urls:
+                        all_urls.append(href)
+            
+            if len(all_urls) >= limit:
+                break
+            
+            time.sleep(0.5)
+        except Exception as e:
+            pass
+    
+    print(f"  CNN: {len(all_urls)} URLs found")
+    return [('cnn', u) for u in all_urls[:limit]]
+
+
+def discover_tempo_urls_paginated(limit=200):
+    all_urls = []
+    
+    print(f"  Tempo: Scraping with pagination...")
+    
+    for page in range(1, 11):
+        try:
+            url = f"https://nasional.tempo.co/indeks/{page}"
+            r = requests.get(url, headers=HEADERS, timeout=15)
+            soup = BeautifulSoup(r.text, 'html.parser')
+            
+            for link in soup.select('.title a, h2 a'):
+                href = link.get('href')
+                if href and href.startswith('http') and 'tempo.co' in href:
+                    all_urls.append(href)
+            
+            if len(all_urls) >= limit:
+                break
+            
+            time.sleep(0.5)
+        except Exception as e:
+            pass
+    
+    print(f"  Tempo: {len(all_urls)} URLs found")
+    return [('tempo', u) for u in all_urls[:limit]]
+
+
+def discover_antaranews_urls_paginated(limit=200):
+    all_urls = []
+    
+    print(f"  Antara: Scraping with pagination...")
+    
+    for page in range(1, 11):
+        try:
+            url = f"https://www.antaranews.com/indeks/{page}"
+            r = requests.get(url, headers=HEADERS, timeout=15)
+            soup = BeautifulSoup(r.text, 'html.parser')
+            
+            for link in soup.select('.simple-post a, article a'):
+                href = link.get('href')
+                if href:
+                    if not href.startswith('http'):
+                        href = 'https://www.antaranews.com' + href
+                    if 'antaranews.com' in href and href not in all_urls:
+                        all_urls.append(href)
+            
+            if len(all_urls) >= limit:
+                break
+            
+            time.sleep(0.5)
+        except Exception as e:
+            pass
+    
+    print(f"  Antara: {len(all_urls)} URLs found")
+    return [('antaranews', u) for u in all_urls[:limit]]
+
+
+def extract_thumbnail_manual(html_content, source_name):
+    """Manual thumbnail extraction dengan fallback per portal"""
+    soup = BeautifulSoup(html_content, 'html.parser')
+    
+    # Prioritas 1: og:image (standard untuk thumbnail)
+    og_image = soup.find('meta', property='og:image')
+    if og_image and og_image.get('content'):
+        return og_image.get('content')
+    
+    # Prioritas 2: twitter:image
+    tw_image = soup.find('meta', property='twitter:image')
+    if tw_image and tw_image.get('content'):
+        return tw_image.get('content')
+    
+    # Prioritas 3: Selector spesifik per portal
+    selectors = {
+        'kompas': ['.photo__img', '.read__img', 'img.photo'],
+        'detik': ['.detail__media img', '.detail__body-img', 'img.detail__media-image'],
+        'cnn': ['.detail-media img', '.detail-img', 'article img'],
+        'tempo': ['.detail-img img', 'article img', '.img-content'],
+        'antaranews': ['.post-content img', 'article img', '.detail-img']
+    }
+    
+    if source_name in selectors:
+        for selector in selectors[source_name]:
+            img = soup.select_one(selector)
+            if img and img.get('src'):
+                return img.get('src')
+    
+    # Prioritas 4: First article image
+    article_img = soup.select_one('article img, .article img')
+    if article_img and article_img.get('src'):
+        return article_img.get('src')
+    
+    return ""
+
+
+def scrape_article(url, source_name):
+    """Scrape article dengan improved thumbnail detection"""
     try:
-        r = get(rss_url, timeout=20)
-        d = feedparser.parse(r.text)
-    except Exception:
-        d = feedparser.parse(rss_url)
-    urls = []
-    for e in d.entries[:limit]:
-        title = getattr(e, "title", "") or ""
-        summary = getattr(e, "summary", "") or ""
-        if not any(k.lower() in title.lower() or k.lower() in summary.lower() for k in keywords):
-            continue
-        dt_rss = None
-        if getattr(e, "published", None):
-            dt_rss = parse_iso_like(e.published)
-        elif getattr(e, "updated", None):
-            dt_rss = parse_iso_like(e.updated)
-        elif getattr(e, "published_parsed", None):
+        article = Article(url, language='id', fetch_images=True, memoize_articles=False)
+        article.download()
+        article.parse()
+        
+        title = article.title or ""
+        text = article.text or ""
+        
+        if not any(kw.lower() in title.lower() or kw.lower() in text.lower() 
+                   for kw in POLITICAL_KEYWORDS):
+            return None
+        
+        if len(text) < 100:
+            return None
+        
+        # Parse date
+        date_str = ""
+        date_utc = ""
+        if article.publish_date:
             try:
-                dt_rss = datetime(*e.published_parsed[:6], tzinfo=timezone.utc)
-            except Exception:
-                dt_rss = None
-        if date_start or date_end:
-            pass_ok = True
-            if dt_rss:
-                if date_start and dt_rss < date_start:
-                    pass_ok = False
-                if date_end and dt_rss > date_end:
-                    pass_ok = False
-            if not pass_ok:
-                continue
-        link = getattr(e, "link", "")
-        if link:
-            urls.append(norm_url(link))
-    return list(dict.fromkeys(urls))
+                if isinstance(article.publish_date, str):
+                    date_str = article.publish_date
+                else:
+                    date_str = article.publish_date.isoformat()
+                    date_utc = article.publish_date.astimezone(timezone.utc).isoformat()
+            except:
+                pass
+        
+        # Improved thumbnail extraction
+        thumbnail = article.top_image or ""
+        
+        # Fallback: manual extraction kalau newspaper4k gagal
+        if not thumbnail or len(thumbnail) < 10:
+            thumbnail = extract_thumbnail_manual(article.html, source_name)
+        
+        # Validasi URL thumbnail
+        if thumbnail and not thumbnail.startswith('http'):
+            # Convert relative URL to absolute
+            base_url = f"{urlsplit(url).scheme}://{urlsplit(url).netloc}"
+            if thumbnail.startswith('//'):
+                thumbnail = f"https:{thumbnail}"
+            elif thumbnail.startswith('/'):
+                thumbnail = f"{base_url}{thumbnail}"
+        
+        return {
+            "url": url,
+            "domain": urlsplit(url).netloc,
+            "source": source_name,
+            "title": title,
+            "text": text,
+            "text_len": len(text),
+            "date": date_str,
+            "date_utc": date_utc,
+            "authors": list(article.authors) if article.authors else [],
+            "image": thumbnail,
+            "image_path": "",
+        }
+        
+    except Exception as e:
+        return None
 
-def extract_article_generic(url, source):
-    r = get(url)
-    soup = BeautifulSoup(r.text, "html.parser")
-    title_node = soup.find(["h1", "h2"])
-    title = title_node.get_text(strip=True) if title_node else ""
-    sel_map = {
-        "kompas": "div.read__content",
-        "detik": "div.detail__body-text",
-        "cnn":   "div.detail-text, div.article",
-        "antaranews": "div.post-content, div#content",
-    }
-    node = soup.select_one(sel_map.get(source, "article, div.entry-content, div.content"))
-    text = ""
-    if node:
-        ps = node.find_all("p")
-        text = " ".join(p.get_text(" ", strip=True) for p in ps) or node.get_text(" ", strip=True)
-    if not text:
-        art = soup.find("article")
-        if art:
-            text = " ".join(p.get_text(" ", strip=True) for p in art.find_all("p"))
-    m = re.search(r'property="article:published_time" content="([^"]+)"', r.text) or \
-        re.search(r'name="pubdate" content="([^"]+)"', r.text) or \
-        re.search(r'itemprop="datePublished" content="([^"]+)"', r.text)
-    date_raw = m.group(1) if m else ""
-    og = re.search(r'property="og:image" content="([^"]+)"', r.text)
-    image = og.group(1) if og else ""
-    parsed_dt = parse_iso_like(date_raw)
-    return {
-        "url": url,
-        "domain": urlsplit(url).netloc,
-        "source": source,
-        "title": title,
-        "date": date_raw,
-        "date_utc": to_iso(parsed_dt) if parsed_dt else "",
-        "text": text,
-        "text_len": len(text) if text else 0,
-        "image": image,
-    }
 
 def download_image(url, path):
+    """Download image dengan validasi"""
     try:
-        r = get(url, timeout=20)
+        # Skip jika URL tidak valid
+        if not url or not url.startswith('http'):
+            return ""
+        
+        # Download dengan timeout
+        r = requests.get(url, headers=HEADERS, timeout=15, stream=True)
+        
+        # Check content type
+        content_type = r.headers.get('content-type', '')
+        if 'image' not in content_type.lower():
+            return ""
+        
+        # Save file
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "wb") as f:
-            f.write(r.content)
-        return True
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+        
+        return path
     except Exception as e:
-        print("img error:", url, e)
-        return False
+        return ""
+
 
 def create_metadata(news_data, topic="Kebijakan Hukum, Politik, & HAM"):
-    created_utc = to_iso(datetime.now(timezone.utc))
+    created_utc = datetime.now(timezone.utc).isoformat()
     records = []
+    
     for i, item in enumerate(news_data, 1):
-        preview = (item.get("text","")[:280] + "…") if item.get("text","") and len(item["text"]) > 280 else item.get("text","")
+        preview = (item.get("text","")[:280] + "...") if len(item.get("text","")) > 280 else item.get("text","")
         records.append({
             "id": i,
             "title": item.get("title", ""),
@@ -160,7 +314,8 @@ def create_metadata(news_data, topic="Kebijakan Hukum, Politik, & HAM"):
             "topic": topic,
             "date_raw": item.get("date", ""),
             "date_utc": item.get("date_utc", ""),
-            "modality": "text",
+            "authors": ", ".join(item.get("authors", [])),
+            "modality": "text+image" if item.get("image_path") else "text",
             "language": "id",
             "text_len": item.get("text_len", 0),
             "text_preview": preview,
@@ -168,71 +323,158 @@ def create_metadata(news_data, topic="Kebijakan Hukum, Politik, & HAM"):
             "image_path": item.get("image_path", ""),
             "label": 0,
             "created_at_utc": created_utc,
-            "notes": "berita valid hasil scraping portal resmi"
+            "notes": "berita valid hasil scraping portal resmi (newspaper4k)"
         })
     return records
 
-def scrape_all_sources(
-    output_dir=OUTPUT_DIR,
-    keywords=POLITICAL_KEYWORDS,
-    max_per_source=40,
+
+def scrape_news(
+    max_total=500,
+    max_per_source=150,
+    max_workers=15,
     download_images=True,
-    date_start=datetime(2024, 11, 1, tzinfo=timezone.utc),
-    date_end=None
+    start_date=datetime(2024, 10, 20, tzinfo=timezone.utc),
+    end_date=None,
+    sources=['kompas', 'detik', 'cnn', 'tempo', 'antaranews']
 ):
-    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
     os.makedirs(IMG_DIR, exist_ok=True)
-
-    if date_end is None:
-        date_end = datetime.now(timezone.utc)
-
-    tasks = []
-    for name, feed in RSS_FEEDS.items():
-        urls = expand_rss_filtered(feed, keywords, limit=max_per_source * 3, date_start=date_start, date_end=date_end)
-        print(f"{name}: candidates {len(urls)}")
-        tasks.extend((name, u) for u in urls[:max_per_source])
-        time.sleep(0.3)
-
+    
+    if end_date is None:
+        end_date = datetime.now(timezone.utc)
+    
+    print("="*70)
+    print("NEWSPAPER4K NEWS SCRAPER - Era Prabowo")
+    print("="*70)
+    print(f"Period: {start_date.date()} -> {end_date.date()}")
+    print(f"Target: {max_total} articles total ({max_per_source} per source)")
+    print(f"Workers: {max_workers} threads")
+    print(f"Sources: {', '.join(sources)}")
+    print("="*70)
+    
+    print("\nDiscovering article URLs...\n")
+    all_urls = []
+    
+    if 'kompas' in sources:
+        all_urls.extend(discover_kompas_urls_with_date(start_date, end_date, limit_per_day=10))
+        time.sleep(1)
+    
+    if 'detik' in sources:
+        all_urls.extend(discover_detik_urls_with_date(start_date, end_date, limit_per_day=10))
+        time.sleep(1)
+    
+    if 'cnn' in sources:
+        all_urls.extend(discover_cnn_urls_paginated(max_per_source))
+        time.sleep(1)
+    
+    if 'tempo' in sources:
+        all_urls.extend(discover_tempo_urls_paginated(max_per_source))
+        time.sleep(1)
+    
+    if 'antaranews' in sources:
+        all_urls.extend(discover_antaranews_urls_paginated(max_per_source))
+        time.sleep(1)
+    
     seen = set()
-    uniq_tasks = []
-    for src, u in tasks:
-        if u not in seen:
-            seen.add(u)
-            uniq_tasks.append((src, u))
-    print("Total unique URLs:", len(uniq_tasks))
+    unique_urls = []
+    for source, url in all_urls:
+        if url not in seen:
+            seen.add(url)
+            unique_urls.append((source, url))
+    
+    print(f"\nTotal unique URLs: {len(unique_urls)}")
+    
+    print(f"\nScraping articles (max: {max_total})...\n")
+    articles = []
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_url = {
+            executor.submit(scrape_article, url, source): (source, url)
+            for source, url in unique_urls
+        }
+        
+        for i, future in enumerate(as_completed(future_to_url), 1):
+            if len(articles) >= max_total:
+                print(f"\nReached max_total: {max_total}")
+                break
+            
+            source, url = future_to_url[future]
+            
+            try:
+                result = future.result()
+                if result:
+                    articles.append(result)
+                    img_status = "✓" if result.get('image') else "✗"
+                    print(f"[{len(articles)}/{max_total}] {img_status} {source}: {result['title'][:50]}...")
+            except:
+                pass
+    
+    print(f"\n{'='*70}")
+    print(f"Scraping complete: {len(articles)} articles")
+    print(f"{'='*70}")
+    
+    if download_images and articles:
+        print(f"\nDownloading thumbnails...\n")
+        
+        def download_wrapper(args):
+            idx, article = args
+            if article.get("image", "").startswith("http"):
+                ext = article["image"].split("?")[0].split(".")[-1][:4] or "jpg"
+                img_path = os.path.join(IMG_DIR, f"HPH_{idx:04d}.{ext}")
+                downloaded = download_image(article["image"], img_path)
+                if downloaded:
+                    article["image_path"] = downloaded
+                    if idx % 10 == 0:
+                        print(f"  ✓ Downloaded {idx} thumbnails...")
+            return article
+        
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            articles = list(executor.map(download_wrapper, enumerate(articles, 1)))
+        
+        success = sum(1 for a in articles if a.get('image_path'))
+        print(f"\n  Total downloaded: {success}/{len(articles)} thumbnails")
+    
+    if articles:
+        with open(os.path.join(OUTPUT_DIR, "articles.json"), "w", encoding="utf-8") as f:
+            json.dump(articles, f, ensure_ascii=False, indent=2)
+        
+        metadata = create_metadata(articles)
+        
+        df = pd.DataFrame(metadata)
+        df.to_csv(os.path.join(OUTPUT_DIR, "metadata_rey.csv"), index=False, encoding="utf-8")
+        
+        with open(os.path.join(OUTPUT_DIR, "metadata_rey.json"), "w", encoding="utf-8") as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
+        
+        print(f"\n{'='*70}")
+        print("SUCCESS!")
+        print(f"{'='*70}")
+        print(f"Total articles: {len(articles)}")
+        print(f"With thumbnails: {sum(1 for a in articles if a.get('image_path'))}/{len(articles)}")
+        print(f"Avg text length: {sum(a['text_len'] for a in articles) // len(articles)} chars")
+        print(f"\nBreakdown by source:")
+        for source in sources:
+            count = sum(1 for a in articles if a['source'] == source)
+            if count > 0:
+                print(f"  {source}: {count} articles")
+        print(f"{'='*70}")
+        print(f"Files saved to: {OUTPUT_DIR}")
+        print(f"  articles.json")
+        print(f"  metadata_rey.csv")
+        print(f"  metadata_rey.json")
+        if download_images:
+            print(f"  images/ ({sum(1 for a in articles if a.get('image_path'))} thumbnails)")
+        print(f"{'='*70}")
+    
+    return articles
 
-    out, retry = [], []
-    for i, (src, u) in enumerate(uniq_tasks, start=1):
-        print(f"[{i}/{len(uniq_tasks)}] {src} -> {u}")
-        try:
-            art = extract_article_generic(u, src)
-            if art["text"] and len(art["text"]) > 120:
-                if download_images and art.get("image", "").startswith("http"):
-                    ext = (art["image"].split("?")[0].split(".")[-1] or "jpg")[:4]
-                    ip = os.path.join(IMG_DIR, f"HPH_{i:04d}.{ext}")
-                    if download_image(art["image"], ip):
-                        art["image_path"] = ip
-                out.append(art)
-            else:
-                retry.append(u)
-            time.sleep(0.6)
-        except Exception as e:
-            print("news error:", u, e)
-            retry.append(u)
-            time.sleep(1.0)
-
-    save_json(os.path.join(output_dir, "articles.json"), out)
-    save_json(os.path.join(output_dir, "retry_queue.json"), retry)
-
-    metadata = create_metadata(out)
-    df = pd.DataFrame(metadata)
-    df.to_csv(os.path.join(output_dir, "metadata_valid.csv"), index=False, encoding="utf-8")
-    with open(os.path.join(output_dir, "metadata_valid.json"), "w", encoding="utf-8") as f:
-        json.dump(metadata, f, ensure_ascii=False, indent=2)
-
-    print("Saved:", len(out), "articles,", len(retry), "retry")
-    print("metadata_valid.csv & metadata_valid.json generated automatically!")
-    return out
 
 if __name__ == "__main__":
-    scrape_all_sources(download_images=True, max_per_source=40)
+    articles = scrape_news(
+        max_total=20,
+        max_per_source=150,
+        max_workers=15,
+        download_images=True,
+        start_date=datetime(2024, 10, 20, tzinfo=timezone.utc),
+        end_date=datetime(2025, 10, 30, tzinfo=timezone.utc),
+    )

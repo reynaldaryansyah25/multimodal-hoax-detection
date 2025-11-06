@@ -28,3 +28,4 @@ data/raw/youtube/thumbnails/
 # Ignore other binary files accidentally in raw
 data/raw/**/*.jpg
 data/raw/**/*.png
+data/raw/**/*.webp
