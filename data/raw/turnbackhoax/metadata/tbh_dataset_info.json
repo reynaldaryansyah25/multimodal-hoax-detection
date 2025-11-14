@@ -1,0 +1,94 @@
+{
+  "dataset_info": {
+    "name": "TurnBackHoax Political Hoax Dataset",
+    "version": "1.0",
+    "created_date": "2025-11-12 19:11:35",
+    "description": "Dataset berita hoax politik Indonesia dari TurnBackHoax - SEMUA DATA HOAX TERVERIFIKASI",
+    "label_notes": "Semua data diberi label HOAX (0) karena berasal dari TurnBackHoax fact-check"
+  },
+  "statistics": {
+    "total_articles": 1973,
+    "articles_with_images": 1968,
+    "articles_without_images": 5,
+    "image_coverage_percentage": 99.75,
+    "total_image_size_mb": 380.28,
+    "average_image_size_mb": 0.19
+  },
+  "image_statistics": {
+    "format_distribution": {
+      "jpg": 445,
+      "png": 1523,
+      "gif": 0,
+      "webp": 0,
+      "other": 0
+    },
+    "total_images": 1968,
+    "download_status": {
+      "success": 1968,
+      "not_found": 5
+    }
+  },
+  "label_distribution": {
+    "numeric": {
+      "0": 1973
+    },
+    "text": {
+      "hoax": 1973
+    },
+    "note": "ALL HOAX - Verified by TurnBackHoax"
+  },
+  "date_range": {
+    "min": "01/01/2023",
+    "max": "31/12/2024"
+  },
+  "social_media_distribution": {
+    "Twitter": 1905,
+    "TikTok": 27,
+    "WhatsApp": 26,
+    "Facebook": 9,
+    "Instagram": 5,
+    "YouTube": 1
+  },
+  "flag_distribution": {
+    "SALAH": 1971,
+    "PENIPUAN": 2
+  },
+  "text_statistics": {
+    "min": 22,
+    "max": 1818,
+    "mean": 227.91383679675621,
+    "median": 159.0
+  },
+  "engagement_statistics": {
+    "views": {
+      "min": 0,
+      "max": 0,
+      "mean": 0.0,
+      "median": 0.0
+    },
+    "likes": {
+      "min": 0,
+      "max": 0,
+      "mean": 0.0,
+      "median": 0.0
+    },
+    "comments": {
+      "min": 0,
+      "max": 0,
+      "mean": 0.0,
+      "median": 0.0
+    },
+    "shares": {
+      "min": 0,
+      "max": 0,
+      "mean": 0.0,
+      "median": 0.0
+    }
+  },
+  "files": {
+    "csv_path": "./data/raw/turnbackhoax/tbh_complete_dataset1.csv",
+    "json_path": "./data/raw/turnbackhoax/tbh_dataset_info.json",
+    "images_directory": "./data/raw/turnbackhoax/images",
+    "source_csv": "./data/raw/turnbackhoax/metadata/turnbackhoax_fix.csv"
+  }
+}

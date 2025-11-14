@@ -36,4 +36,4 @@ def download_images(csv_path, output_dir):
 
 if __name__ == "__main__":
     # Jalankan fungsi utama
-    download_images("data/raw/news/news.csv", "data/raw/news/images")
+    download_images("data/raw/news/metadata_news_final.csv", "data/raw/news/images")

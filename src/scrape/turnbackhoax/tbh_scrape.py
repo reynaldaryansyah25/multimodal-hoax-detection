@@ -23,6 +23,32 @@ END_DATE = os.getenv("TBH_END_DATE", datetime.now().strftime("%Y-%m-%d"))
 START_DT = datetime.fromisoformat(START_DATE)
 END_DT = datetime.fromisoformat(END_DATE)
 
+# ============== NORMALIZER TEKS TBH (ANTI-SHORTCUT) ==============
+TBH_TEXT_RULES = [
+    r"\b(kesimpulan|kategori|narasi|penjelasan|referensi|pemeriksaan\s*fakta|periksa\s*fakta|cek\s*fakta)\b\s*[:\-]?",
+    r"\b(tidak\s+ada|tidak\s+ditemukan)\s+informasi\s+(dari\s+)?kredibel.*?\bmerupakan\s+konten\b.*",
+    r"\bberisi\s+klaim\b.*?\bmerupakan\s+konten\b.*",
+    r"\b(video|unggahan|konten)\s+yang\s+beredar\b.*?\bmerupakan\b.*",
+    r"\b(konten\s+(menyesatkan|palsu|dimanipulasi|tiruan|salah)|misleading\s*content|fabricated\s*content|false\s*context|impostor\s*content)\b",
+    r"\bhasi[l]\s+[a-z\.\s]{2,60}\b",                 # "Hasil Dyah Febriyani"
+    r"\barsip\b|\bar sip\b|\[arsip\]",
+    r"\b(instagram|facebook|tiktok|youtube|x\s*\(twitter\)|twitter)\b",
+    r"https?://\S+",
+    r"\([^\)]{10,}\)", r"\[[^\]]{3,}\]", r"={3,}",
+]
+def normalize_tbh_text(raw: str) -> str:
+    x = raw if isinstance(raw, str) else ""
+    for p in TBH_TEXT_RULES:
+        x = re.sub(p, " ", x, flags=re.IGNORECASE | re.DOTALL)
+    x = re.sub(r"\s+", " ", x).strip()
+    return x
+
+def strip_tbh_title_label(title: str) -> str:
+    t = title if isinstance(title, str) else ""
+    t = re.sub(r"^\s*\[(SALAH|BENAR|PENIPUAN|DISINFORMASI|MISINFORMASI|HOAKS?)\]\s*", " ", t, flags=re.IGNORECASE)
+    return re.sub(r"\s+"," ",t).strip()
+
+
 # ============== PERBAIKAN 1: EXPANDED KEYWORDS ==============
 # Tambahkan lebih banyak kata kunci relevan
 POLITICAL_KEYWORDS = [
@@ -377,59 +403,53 @@ def ekstrak_teks(soup: BeautifulSoup) -> str:
     return ""
 
 def ekstrak_judul(soup: BeautifulSoup) -> str:
-    """Mengekstrak judul artikel"""
     title_selectors = ["h1.entry-title", "h1.post-title", "article h1", "h1.mh-entry-title", "h1"]
     for sel in title_selectors:
         el = soup.select_one(sel)
         if el:
             title = el.get_text(strip=True)
             if len(title) > 10:
-                return title
+                return strip_tbh_title_label(title)
     return ""
+
 
 
 # ============== PERBAIKAN 4: EKSTRAKSI LEBIH ROBUST ==============
 def ekstrak_artikel_hoax(url: str) -> Optional[Dict]:
-    """Ekstraksi artikel dengan threshold lebih rendah untuk lebih banyak data"""
     r = ambil_dengan_retry(url, max_retries=5, timeout=25)
-    if not r:
-        return None
-    
+    if not r: return None
     try:
         soup = BeautifulSoup(r.content, "html.parser")
     except:
         return None
-    
-    # Title - 10 fallback selectors
+
+    # Title (dibersihkan)
     title = ""
-    for sel in ["h1.entry-title", "h1.post-title", "article h1", "h1.mh-entry-title", 
-                "h1", ".entry-title", ".post-title", ".title", "h1.post-header", "h2"]:
+    for sel in ["h1.entry-title","h1.post-title","article h1","h1.mh-entry-title","h1",".entry-title",".post-title",".title","h1.post-header","h2"]:
         el = soup.select_one(sel)
-        if el and len(el.get_text(strip=True)) > 5:  # Turunkan dari 8 → 5
-            title = el.get_text(strip=True)
+        if el and len(el.get_text(strip=True)) > 5:
+            title = strip_tbh_title_label(el.get_text(strip=True))
             break
-    
-    if not title or len(title) < 5:  # Turunkan dari 5
+    if not title or len(title) < 5:
         return None
-    
-    # Text - 13 fallback selectors
+
+    # Text
     text = ""
-    for sel in ["article .entry-content", ".entry-content", ".post-content", "article",
-                "main article", ".article-content", ".mh-content-inner", ".td-page-content",
-                ".content", ".post", ".post-body", ".entry", "main"]:
+    for sel in ["article .entry-content",".entry-content",".post-content","article","main article",".article-content",".mh-content-inner",".td-page-content",".content",".post",".post-body",".entry","main"]:
         node = soup.select_one(sel)
         if node:
-            for tag in node(["script", "style"]):
-                tag.decompose()
+            for tag in node(["script","style"]): tag.decompose()
             raw = node.get_text(" ", strip=True)
             text = " ".join(raw.split())
-            if len(text) >= 50:  # TURUNKAN threshold dari 80 → 50
+            if len(text) >= 50:
                 break
-    
-    if len(text) < 50:  # TURUNKAN threshold dari 80 → 50
+    if len(text) < 50:
         return None
-    
-    # Date extraction
+
+    # NORMALIZER TBH
+    text = normalize_tbh_text(text)
+
+    # Date, kategori, gambar, metrics tetap seperti sebelumnya...
     date_raw = ""
     date_pattern = re.search(r"/(\d{4})/(\d{1,2})/(\d{1,2})/", url)
     if date_pattern:
@@ -437,33 +457,32 @@ def ekstrak_artikel_hoax(url: str) -> Optional[Dict]:
         date_raw = f"{y}-{m.zfill(2)}-{d.zfill(2)}"
         try:
             dt = parse_tanggal(date_raw)
-            # PERBAIKAN: Jangan terlalu strict pada tanggal
-            # Hanya filter yang SANGAT di luar range
             if dt and (dt.year < 2023 or dt.year > 2025):
                 return None
         except:
             pass
-    
+
     cats = ekstrak_kategori(soup)
     imgs = ekstrak_gambar(soup)
     metrics = ekstrak_metrics_sosial(soup)
-    
+
     artikel_data = {
-        "url": url, 
-        "title": title[:200], 
-        "date_raw": date_raw, 
-        "text": text[:5000], 
-        "text_len": len(text), 
-        "categories": cats, 
-        "images": imgs, 
-        "post_view": metrics["views"], 
-        "post_likes": metrics["likes"], 
-        "post_comment": metrics["comments"], 
-        "post_share": metrics["shares"], 
+        "url": url,
+        "title": title[:200],
+        "date_raw": date_raw,
+        "text": text[:5000],
+        "text_len": len(text),
+        "categories": cats,
+        "images": imgs,
+        "post_view": metrics["views"],
+        "post_likes": metrics["likes"],
+        "post_comment": metrics["comments"],
+        "post_share": metrics["shares"],
         "label": 0
     }
-    
     return artikel_data if filter_berita_politik(artikel_data) else None
+
+
 
 
 # ============== MANAJEMEN STATE ==============

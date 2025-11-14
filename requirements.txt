@@ -1,55 +1,69 @@
-# Core Scientific
+# ========================================
+# MULTIMODAL HOAX DETECTION
+# Requirements - Clean & Optimized
+# ========================================
+
+# Core Scientific Computing
 numpy==1.26.4
 scipy>=1.7.3
 pandas>=2.2.2
-scikit-learn>=1.1.1
+scikit-learn>=1.5.0
 
-# Audio: Feature, ASR, Diarization
+# Deep Learning (UPDATED untuk fix vulnerability)
+torch>=2.6.0
+torchvision>=0.21.0
+torchaudio>=2.6.0
+lightning>=2.0.0
+
+# NLP & Transformers
+transformers>=4.46.0
+sentencepiece>=0.2.0
+datasets>=3.0.0
+accelerate>=1.0.0
+tokenizers>=0.20.0
+
+# Audio Processing & ASR
 librosa>=0.10.0
 soundfile>=0.12.0
 audioread>=3.0.0
 openai-whisper>=20231117
 
-# Diarization (pyannote) -- versi stabil!
+# Speaker Diarization (pyannote)
 pyannote.audio==3.1.1
 pyannote.core==5.0.0
 pyannote.database==5.1.0
 pyannote.metrics==3.2.1
 einops>=0.6.0
-asteroid-filterbanks>=0.3.0
+asteroid-filterbanks>=0.4.0
 
-# NLP/Transformers/Fusion
-transformers>=4.30.0
-sentencepiece>=0.1.99
-datasets>=4.2.0,<5.0.0
-accelerate>=0.20.0
-
-# Deep Learning
-torch>=2.0.0
-lightning>=2.0.0
-pytorch-lightning>=2.0.0
-
-# Scraping & Data Collect
-yt-dlp>=2023.7.6
+# Web Scraping & Data Collection
+yt-dlp>=2024.11.0
 requests>=2.32.0
 beautifulsoup4>=4.12.3
 readability-lxml>=0.8.1
 trafilatura>=1.12.0
+newspaper3k>=0.2.8
 
-# Progress & Utilities
+# Utilities
 tqdm>=4.66.4
 python-dotenv>=1.0.1
-pytz>=2022.1,<2023.0
-pyyaml>=5.1
-packaging>=20.0
+pyyaml>=6.0
+packaging>=24.0
 
-# Visualization & Exploration
-matplotlib>=3.7.0
-seaborn>=0.12.0
+# Visualization
+matplotlib>=3.9.0
+seaborn>=0.13.0
 
-# Jupyter & Kernel (for Notebook)
-jupyter>=1.0.0
-ipykernel>=6.25.0
+# Jupyter & Development
+jupyter>=1.1.0
+ipykernel>=6.29.0
+notebook>=7.0.0
 
-# Optional: For compatibility
-# (No duplicate lines; version conflict resolved; only include one pandas, tqdm, yt-dlp, etc)
+# Additional ML Utils
+joblib>=1.4.0
+pillow>=10.0.0
+openpyxl>=3.1.0
+
+# Text Processing (Indonesian)
+sastrawi>=1.0.1
+nltk>=3.8.1

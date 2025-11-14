@@ -1,31 +1,151 @@
 # Ignore virtual environments
 .venv/
 .venv-labelstudio/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment variables
 .env
+.env.local
+.env.production
 
 # VS Code settings
 .vscode/
+*.code-workspace
 
 # Python cache
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Ignore all images, video, audio in data/raw (YouTube, TBH, News)
+# =============================================
+# MODEL FILES - CRITICAL TO IGNORE LARGE FILES
+# =============================================
+
+# Ignore ALL model directories completely
+models/
+src/modeling/**/results/
+
+# Specific large model file patterns from your error
+models/pseudo_labeling/indobert_title_model-*/
+src/modeling/unimodal/results/checkpoint-*/
+src/modeling/multimodal/results/checkpoint-*/
+
+# All model file extensions
+*.model.safetensors
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.hdf5
+*.model
+*.pth
+*.pt
+*.ckpt
+*.bin
+*.msgpack
+*.onnx
+*.tflite
+
+# Training artifacts
+optimizer.pt
+scheduler.pt
+training_args.bin
+runs/
+logs/
+tensorboard/
+wandb/
+mlruns/
+
+# Checkpoint directories
+checkpoint-*/
+*checkpoint*
+best_model/
+output/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# Data directories - ignore media files but keep metadata
 data/raw/turnbackhoax/images/
 data/raw/news/images/
 data/raw/youtube/audio/
 data/raw/youtube/videos/
 data/raw/youtube/thumbnails/
 
-# Make sure metadata JSON/CSV ARE included
+# Keep metadata files (JSON/CSV) in raw directories
 !data/raw/turnbackhoax/*.json
-!data/raw/news/*.json
-!data/raw/youtube/*.json
 !data/raw/turnbackhoax/*.csv
+!data/raw/news/*.json
 !data/raw/news/*.csv
+!data/raw/youtube/*.json
 !data/raw/youtube/*.csv
 
-# Ignore other binary files accidentally in raw
+# Ignore other binary files in raw data directories
 data/raw/**/*.jpg
+data/raw/**/*.jpeg
 data/raw/**/*.png
+data/raw/**/*.gif
 data/raw/**/*.webp
+data/raw/**/*.mp4
+data/raw/**/*.avi
+data/raw/**/*.mov
+data/raw/**/*.mp3
+data/raw/**/*.wav
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

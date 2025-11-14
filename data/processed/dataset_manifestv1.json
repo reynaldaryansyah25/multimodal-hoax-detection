@@ -1,0 +1,31 @@
+{
+  "random_seed": 42,
+  "lsh_threshold": 0.95,
+  "lsh_num_perm": 128,
+  "shingle_k": 5,
+  "news_csv": "data/raw\\news\\AllMetadata_Cleaned_v3.csv",
+  "tbh_csv": "data/raw\\turnbackhoax\\metadata\\tbh_BERSIH_POLITIK_SAJA.csv",
+  "total_rows": 3074,
+  "label_distribution": {
+    "0": 1179,
+    "1": 1895
+  },
+  "source_distribution": {
+    "news": 1895,
+    "tbh": 1179
+  },
+  "date_range": {
+    "min": "2019-10-01 00:00:00",
+    "max": "2025-11-11 00:00:00"
+  },
+  "processing_steps": {
+    "initial_news": 1946,
+    "initial_tbh": 1179,
+    "after_date_filter_news": 1946,
+    "after_date_filter_tbh": 1179,
+    "after_content_filter": 3125,
+    "after_exact_dedup": 3074,
+    "after_lsh_dedup": 3074,
+    "final": 3074
+  }
+}

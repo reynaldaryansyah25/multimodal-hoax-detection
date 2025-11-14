@@ -18,7 +18,7 @@ def add_valid_image_path(csv_path, output_path, image_dir):
 
 if __name__ == "__main__":
     add_valid_image_path(
-        "data/raw/news/news.csv",              
+        "data/raw/news/metadata_news_final.csv",              
         "data/raw/news/news_with_images.csv", 
         "data/raw/news/images"                
     )
