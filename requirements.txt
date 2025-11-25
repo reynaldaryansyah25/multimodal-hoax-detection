@@ -1,6 +1,5 @@
 # ========================================
-# MULTIMODAL HOAX DETECTION
-# Requirements - Clean & Optimized
+# MULTIMODAL HOAX DETECTION - STABLE (CUDA 12.1)
 # ========================================
 
 # Core Scientific Computing
@@ -9,14 +8,15 @@ scipy>=1.7.3
 pandas>=2.2.2
 scikit-learn>=1.5.0
 
-# Deep Learning (UPDATED untuk fix vulnerability)
-torch>=2.6.0
-torchvision>=0.21.0
-torchaudio>=2.6.0
-lightning>=2.0.0
+# Deep Learning (CUDA 12.1)
+# Gunakan versi yang benar-benar tersedia di cu121
+torch==2.5.1
+torchvision==0.20.1
+torchaudio==2.5.1
+lightning>=2.0.0,<2.3.0
 
 # NLP & Transformers
-transformers>=4.46.0
+transformers>=4.41.0,<4.47.0
 sentencepiece>=0.2.0
 datasets>=3.0.0
 accelerate>=1.0.0
