@@ -452,11 +452,6 @@ print(f"F1-Score: {results['f1']:.4f}")
 - ✅ Average length: 200-800 chars
 - ✅ Removed high-repetition noise
 
-### Model Performance (Baseline)
-Akan diupdate setelah training selesai:
-- [ ] Text-only BERT
-- [ ] Multimodal Late Fusion
-- [ ] Multimodal Attention Fusion
 
 ---
 
@@ -513,21 +508,6 @@ Akan diupdate setelah training selesai:
 - [x] Audio transcription pipeline
 - [x] Data quality checks
 - [x] Jupyter notebooks for EDA
-
-### In Progress 🚧
-- [ ] Feature extraction (Text, Audio, Image)
-- [ ] Model training & evaluation
-- [ ] Multimodal fusion strategies
-- [ ] Hyperparameter optimization
-
-### Planned 📋
-- [ ] Docker containerization
-- [ ] REST API deployment
-- [ ] Real-time inference
-- [ ] Web dashboard improvements
-- [ ] Mobile app support
-- [ ] Multilingual support (beyond Indonesian)
-
 ---
 
 ## 🤝 Kontribusi
@@ -582,7 +562,3 @@ Proyek ini dilisensikan di bawah [MIT License](LICENSE).
   - Indonesian NLP community
 
 ---
-
-**Last Updated**: 2026-05-17 | **Status**: 🟢 Active Development
-
-*Membangun kepercayaan digital melalui deteksi misinformasi yang akurat.*
