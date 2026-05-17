@@ -1,0 +1,18 @@
+# 1. Folder Environment (HARAM DI-UPLOAD)
+env/
+venv/
+.venv/
+
+# 2. File Sampah Python
+__pycache__/
+*.pyc
+
+# 3. File Audio Model (Kan sudah download online)
+assets/audio_models/*.pt
+
+# 4. File Konfigurasi VS Code
+.vscode/
+
+# 5. File System
+.DS_Store
+Thumbs.db

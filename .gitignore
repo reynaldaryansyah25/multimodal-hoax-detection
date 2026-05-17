@@ -1,4 +1,6 @@
-# Ignore virtual environments
+# =========================================================
+# VIRTUAL ENVIRONMENTS
+# =========================================================
 .venv/
 .venv-labelstudio/
 env/
@@ -7,16 +9,25 @@ ENV/
 env.bak/
 venv.bak/
 
-# Environment variables
+# =========================================================
+# ENVIRONMENT VARIABLES
+# =========================================================
 .env
 .env.local
 .env.production
 
-# VS Code settings
+# =========================================================
+# IDE / EDITOR SETTINGS
+# =========================================================
 .vscode/
 *.code-workspace
+.idea/
+*.swp
+*.swo
 
-# Python cache
+# =========================================================
+# PYTHON CACHE / BUILD FILES
+# =========================================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -41,20 +52,28 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# =============================================
-# MODEL FILES - CRITICAL TO IGNORE LARGE FILES
-# =============================================
+# =========================================================
+# MODEL FILES / LARGE ARTIFACTS
+# =========================================================
 
-# Ignore ALL model directories completely
+# Entire model directories
 models/
-src/modeling/**/results/
 
-# Specific large model file patterns from your error
+# Training results / checkpoints
+src/modeling/**/results/
+src/modeling/**/checkpoint-*/
+checkpoint-*/
+*checkpoint*
+best_model/
+output/
+
+# Specific model directories
 models/pseudo_labeling/indobert_title_model-*/
 src/modeling/unimodal/results/checkpoint-*/
 src/modeling/multimodal/results/checkpoint-*/
 
-# All model file extensions
+# Model extensions
+*.safetensors
 *.model.safetensors
 *.pkl
 *.pickle
@@ -70,58 +89,40 @@ src/modeling/multimodal/results/checkpoint-*/
 *.onnx
 *.tflite
 
+# NumPy / embedding artifacts
+*.npz
+*.npy
+
+# Precomputed embeddings
+src/modeling/**/audio_embeddings_precomputed.npz
+src/modeling/**/image_embeddings_precomputed.npz
+src/modeling/**/text_embeddings_precomputed.npz
+src/modeling/**/video_embeddings_precomputed.npz
+src/modeling/**/embeddings/
+
 # Training artifacts
 optimizer.pt
 scheduler.pt
 training_args.bin
+trainer_state.json
 runs/
 logs/
 tensorboard/
 wandb/
 mlruns/
 
-# Checkpoint directories
-checkpoint-*/
-*checkpoint*
-best_model/
-output/
+# =========================================================
+# DATA FILES / MEDIA
+# =========================================================
 
-# PyInstaller
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.log
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IDE
-.idea/
-*.swp
-*.swo
-
-# Data directories - ignore media files but keep metadata
+# Raw image/audio/video directories
 data/raw/turnbackhoax/images/
 data/raw/news/images/
 data/raw/youtube/audio/
 data/raw/youtube/videos/
 data/raw/youtube/thumbnails/
 
-# Keep metadata files (JSON/CSV) in raw directories
+# Keep metadata
 !data/raw/turnbackhoax/*.json
 !data/raw/turnbackhoax/*.csv
 !data/raw/news/*.json
@@ -129,7 +130,7 @@ data/raw/youtube/thumbnails/
 !data/raw/youtube/*.json
 !data/raw/youtube/*.csv
 
-# Ignore other binary files in raw data directories
+# Media file extensions
 data/raw/**/*.jpg
 data/raw/**/*.jpeg
 data/raw/**/*.png
@@ -141,7 +142,40 @@ data/raw/**/*.mov
 data/raw/**/*.mp3
 data/raw/**/*.wav
 
-# OS generated files
+# =========================================================
+# JUPYTER / NOTEBOOKS
+# =========================================================
+.ipynb_checkpoints
+
+# =========================================================
+# TESTING / COVERAGE
+# =========================================================
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+
+# =========================================================
+# PYINSTALLER
+# =========================================================
+*.manifest
+*.spec
+
+# =========================================================
+# INSTALLER LOGS
+# =========================================================
+pip-log.txt
+pip-delete-this-directory.txt
+
+# =========================================================
+# OS FILES
+# =========================================================
 .DS_Store
 .DS_Store?
 ._*

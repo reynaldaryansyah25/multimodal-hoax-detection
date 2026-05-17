@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+    html, body, [class*="css"]  {
+        font-family: 'Poppins', sans-serif;
+    }
+
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+
+    .main-title {
+        text-align: center;
+        font-size: 3rem;
+        font-weight: 700;
+        color: #2C3E50;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .sub-title {
+        text-align: center;
+        font-size: 1.2rem;
+        color: #7F8C8D;
+        margin-bottom: 30px;
+    }
+
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+        justify-content: center;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        white-space: pre-wrap;
+        background-color: #fff;
+        border-radius: 10px;
+        color: #4F4F4F;
+        font-weight: 600;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+        padding: 0 20px;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background-color: #007BFF !important;
+        color: white !important;
+    }
